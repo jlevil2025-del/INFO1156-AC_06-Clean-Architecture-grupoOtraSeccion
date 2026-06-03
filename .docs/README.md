@@ -79,3 +79,56 @@ classDiagram
     GetFeedUseCase --> IPostRepository : Depende de la abstracción
     PrismaPostRepository ..|> IPostRepository : Implementa (DIP)
 ```
+## Arquitectura del Módulo de Moderación (Alan Bernales)
+
+El motor de moderacion de contenido ha sido refactorizado bajo los principios de **Arquitectura Limpia (Clean Architecture)**. Esta estructura garantiza el aislamiento total de la lógica de negocio pura (algoritmia matemática) de los detalles de infraestructura, como el framework (NestJS) y el mecanismo de persistencia (Prisma ORM / SQLite).
+
+### Estructura del Módulo (`src/moderation/`)
+
+El módulo se organiza de forma desacoplada en tres capas independientes, donde las dependencias apuntan estrictamente hacia el interior (el Dominio):
+
+```text
+src/moderation/
+├── moderation.module.ts           # Orquestador e Inversión de Control (IoC)
+├── domain/                        # Capa del núcleo analítico (Pura)
+│   ├── interfaces/
+│   │   └── content-moderator.interface.ts
+│   └── services/
+│       └── fuzzy-moderator.service.ts
+├── application/                   # Capa de casos de uso y contratos
+│   ├── ports/
+│   │   └── prohibited-word.repository.interface.ts
+│   └── use-cases/
+│       ├── add-prohibited-word.use-case.ts
+│       └── get-prohibited-words.use-case.ts
+└── infrastructure/                # Capa de herramientas y persistencia
+    └── repositories/
+        └── prisma-prohibited-word.repository.ts
+
+### Detalle de las Capas
+
+#### 1. Capa de Dominio
+Es el núcleo agnóstico del sistema. No posee dependencias de librerías externas ni decoradores del framework (como `@Injectable`), garantizando que la matemática del negocio pueda ser testeada de forma aislada.
+
+* **`IContentModerator`**: Interfaz pura que define el contrato de evaluación mediante la firma estricta `moderate(text: string): boolean`.
+* **`FuzzyModeratorService`**: Servicio de dominio puro que implementa el analizador. Para mantener la inmutabilidad de la capa, recibe la lista de palabras prohibidas a través de su constructor durante la instanciación y encapsula el método privado `buildFuzzyRegex` para detectar texto evasivo o con caracteres intermedios (por ejemplo, `"s p a m"`).
+
+#### 2. Capa de Aplicación
+Define las operaciones del sistema y conduce el flujo de datos sin conocer cómo ni dónde se almacenan.
+
+* **Puertos (`ports/`)**: La interfaz `IProhibitedWordRepository` actúa como un límite profesoral o fronterizo (*Boundary*), definiendo el comportamiento abstracto que la base de datos debe cumplir.
+* **Casos de Uso (`use-cases/`)**: Las clases `AddProhibitedWordUseCase` y `GetProhibitedWordsUseCase` ejecutan las acciones del sistema. Dependen únicamente de la abstracción del repositorio (Inversión de Dependencias), permitiendo cambiar el almacenamiento en el futuro (ej. migrar de SQLite a Redis) sin alterar la lógica de la aplicación.
+
+#### 3. Capa de Infraestructura
+Se encarga del soporte operacional e interactúa directamente con los agentes externos.
+
+* **`PrismaProhibitedWordRepository`**: Implementación concreta del puerto de la aplicación. Es la única clase del módulo acoplada a los esquemas de Prisma y se encarga de realizar las consultas físicas sobre el archivo local de la base de datos.
+
+### Inversión de Control (IoC)
+
+La unión de los componentes se realiza dinámicamente en el archivo `moderation.module.ts` de NestJS. Utilizando fábricas personalizadas (`useFactory`), el contenedor de inversión de control de NestJS inyecta el repositorio de infraestructura en los casos de uso puros mediante tokens de TypeScript, resolviendo el grafo de dependencias de afuera hacia adentro de manera limpia y transparente.
+
+
+
+
+
