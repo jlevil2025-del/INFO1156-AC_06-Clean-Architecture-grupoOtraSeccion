@@ -1,5 +1,5 @@
 import { Module } from "@nestjs/common"
-import { PrismaService } from "../prisma/prisma.service"
+import { PrismaService } from "@/shared/prisma.service"
 import { FuzzyModeratorService } from "./domain/services/fuzzy-moderator.service"
 import { PrismaProhibitedWordRepository } from "./infrastructure/repositories/prisma-prohibited-word.repository"
 import { AddProhibitedWordUseCase } from "./application/use-cases/add-prohibited-word.use-case"
