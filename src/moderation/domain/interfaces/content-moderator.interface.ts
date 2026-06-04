@@ -1,4 +1,3 @@
 export interface IContentModerator {
-    
-    moderate(text: string): boolean;
+    moderate(text: string): boolean
 }
