@@ -28,6 +28,11 @@ import { GetProhibitedWordsUseCase } from "@/moderation/application/use-cases/ge
             inject: ["IProhibitedWordRepository"],
         },
     ],
-    exports: [ModerationService, FuzzyModeratorService, AddProhibitedWordUseCase, GetProhibitedWordsUseCase],
+    exports: [
+        ModerationService,
+        FuzzyModeratorService,
+        AddProhibitedWordUseCase,
+        GetProhibitedWordsUseCase,
+    ],
 })
 export class ModerationModule {}
