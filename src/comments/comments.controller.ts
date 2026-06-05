@@ -1,18 +1,24 @@
-import { Body, Controller, Get, Param, Post } from "@nestjs/common"
+import { Body, Controller, Get, Inject, Param, Post } from "@nestjs/common"
 import { CreateCommentDto } from "@/posts/posts.dtos"
-import { CommentsService } from "@/comments/comments.service"
+import { CreateCommentUseCase } from "@/comments/application/create-comment.use-case"
+import { ICommentRepository } from "@/comments/domain/comment.repository.interface"
 
 @Controller("api/posts/:id/comments")
 export class CommentsController {
-    constructor(private readonly commentsService: CommentsService) {}
+    constructor(
+        private readonly createCommentUseCase: CreateCommentUseCase,
+        @Inject("ICommentRepository")
+        private readonly commentRepository: ICommentRepository,
+    ) {}
 
     @Get()
-    list(@Param("id") postId: string) {
-        return this.commentsService.listByPostId(postId)
+    async list(@Param("id") postId: string) {
+        const comments = await this.commentRepository.findByPostId(postId)
+        return { total_comments: comments.length, comments }
     }
 
     @Post()
     create(@Param("id") postId: string, @Body() body: CreateCommentDto) {
-        return this.commentsService.create(postId, body)
+        return this.createCommentUseCase.execute(postId, body.content)
     }
 }
