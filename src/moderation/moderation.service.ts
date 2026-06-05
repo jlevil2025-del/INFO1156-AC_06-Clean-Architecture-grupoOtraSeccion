@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common"
 import { PrismaService } from "@/shared/prisma.service"
+import { FuzzyModeratorService } from "./domain/services/fuzzy-moderator.service"
 
 export type ModerationResult = {
     approved: boolean
@@ -7,21 +8,19 @@ export type ModerationResult = {
     category?: string
 }
 
-const buildFuzzyRegex = (word: string) => {
-    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-    return new RegExp(escaped.split("").join("[^a-zA-Z0-9]*"), "gi")
-}
-
 @Injectable()
 export class ModerationService {
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly fuzzyModerator: FuzzyModeratorService,
+    ) {}
 
     async moderate(text: string): Promise<ModerationResult> {
         const words = await this.prisma.prohibitedWord.findMany()
 
         for (const pw of words) {
-            const regex = buildFuzzyRegex(pw.word)
-            if (regex.test(text)) {
+            this.fuzzyModerator.loadWords([pw.word])
+            if (!this.fuzzyModerator.moderate(text)) {
                 return {
                     approved: false,
                     reason: `Contiene palabra prohibida: "${pw.word}"`,
