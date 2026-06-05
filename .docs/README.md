@@ -74,6 +74,79 @@ classDiagram
         }
     }
 
+# Alan - Aislamiento del Motor de Moderación
+
+## Resumen
+Se refactorizó el módulo `moderation` aplicando **Clean Architecture**, logrando separar de forma estricta la lógica pura de negocio (dominio) de la capa de persistencia de datos e infraestructura.
+
+---
+
+## Archivos Creados
+
+### 1. Capa de Dominio (`src/moderation/domain/`)
+Contiene las reglas de negocio puras y contratos fundamentales. No tiene decoradores de NestJS ni dependencias externas.
+
+* **`interfaces/content-moderator.interface.ts`** Define el contrato formal que debe cumplir cualquier motor de moderación de contenido:
+    ```typescript
+    export interface IContentModerator {
+        moderate(text: string): boolean
+    }
+    ```
+* **`services/fuzzy-moderator.service.ts`** Servicio de dominio puro que implementa la lógica de moderación *fuzzy* mediante expresiones regulares (`regex`). Expone los métodos `loadWords()` para cargar las palabras prohibidas en memoria y `moderate()` para evaluar la validez de un texto.
+
+### 2. Capa de Aplicación (`src/moderation/application/`)
+Orquesta los flujos de trabajo del sistema e interactúa con los puertos del dominio.
+
+* **`ports/prohibited-word.repository.interface.ts`** Interfaz/Puerto que abstrae el acceso a datos para la gestión de palabras prohibidas:
+    * `save(word, category)`: Persiste una nueva palabra en el sistema.
+    * `findAll()`: Retorna la lista completa de palabras con sus respectivos metadatos.
+* **`use-cases/add-prohibited-word.use-case.ts`** Caso de uso encargado de agregar una palabra prohibida, inyectando de manera desacoplada la interfaz `IProhibitedWordRepository`.
+* **`use-cases/get-prohibited-words.use-case.ts`** Caso de uso encargado de recuperar y listar todas las palabras prohibidas.
+
+### 3. Capa de Infraestructura (`src/moderation/infrastructure/`)
+Contiene los detalles de implementación tecnológica externos al dominio.
+
+* **`repositories/prisma-prohibited-word.repository.ts`** Implementación concreta del puerto `IProhibitedWordRepository` utilizando el ORM **Prisma**. Queda registrada en el módulo bajo el token de inyección `"IProhibitedWordRepository"`.
+
+---
+
+## Archivos Modificados
+
+* **`moderation.service.ts`** * Se modificó para inyectar `FuzzyModeratorService` además del `PrismaService`.
+    * El método `moderate()` ahora delega la evaluación de coincidencia por expresiones regulares directamente al servicio de dominio `FuzzyModeratorService`, eliminando la duplicidad de lógica.
+* **`moderation.module.ts`** * Registra `FuzzyModeratorService` como `provider`.
+    * Registra `PrismaProhibitedWordRepository` mapeado al token `"IProhibitedWordRepository"`.
+    * Registra los casos de uso `AddProhibitedWordUseCase` y `GetProhibitedWordsUseCase` a través de fábricas (`useFactory`).
+    * Exporta todos los servicios y utilidades necesarias para el consumo por parte de otros módulos de la aplicación.
+
+---
+
+## Migración de Base de Datos
+
+Se generó y aplicó la migración `20260606000000_fix_uuid_ids`. Esta recrea de forma limpia todas las tablas utilizando identificadores de tipo `TEXT` (UUID) en lugar de un autoincremental `INTEGER`. Con esto se alinea el comportamiento nativo del motor SQLite con las decoraciones `@default(uuid())` definidas en los esquemas de Prisma.
+
+---
+
+## Estructura Final del Módulo
+
+```text
+src/moderation/
+├── domain/
+│   ├── interfaces/
+│   │   └── content-moderator.interface.ts   ← NUEVO
+│   └── services/
+│       └── fuzzy-moderator.service.ts        ← NUEVO
+├── application/
+│   ├── ports/
+│   │   └── prohibited-word.repository.interface.ts  ← NUEVO
+│   └── use-cases/
+│       ├── add-prohibited-word.use-case.ts   ← NUEVO
+│       └── get-prohibited-words.use-case.ts  ← NUEVO
+├── infrastructure/
+│   └── repositories/
+│       └── prisma-prohibited-word.repository.ts  ← NUEVO
+├── moderation.module.ts                      ← MODIFICADO
+└── moderation.service.ts                     ← MODIFICADO
     PostsController --> GetFeedUseCase : Invoca
     PostsController ..> GetFeedInput : Mapea DTO a Input puro
     GetFeedUseCase --> IPostRepository : Depende de la abstracción
