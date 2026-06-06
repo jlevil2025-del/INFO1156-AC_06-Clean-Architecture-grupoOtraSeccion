@@ -1,18 +1,34 @@
-// src/posts/infrastructure/controllers/posts.controller.ts
-import { Controller, Post, Body } from "@nestjs/common"
+import { Controller, Get, Post, Body, Query } from "@nestjs/common"
 import { CreatePostUseCase } from "../../application/use-cases/create-post.use-case"
-import { CreatePostDto } from "../../posts.dtos"
+import { PostsService } from "../../posts.service"
+import { FeedRankingStrategyFactory } from "../../feed-ranking.strategy"
+import { CreatePostDto, FeedQueryDto } from "../../posts.dtos"
 
-@Controller("posts")
+@Controller("api/posts")
 export class PostsController {
-    constructor(private readonly createPostUseCase: CreatePostUseCase) {}
+    constructor(
+        private readonly createPostUseCase: CreatePostUseCase,
+        private readonly postsService: PostsService,
+        private readonly feedRankingFactory: FeedRankingStrategyFactory,
+    ) {}
 
     @Post()
     async create(@Body() createPostDto: CreatePostDto) {
-        // Ahora el controlador está "limpio", solo recibe la petición y se la pasa al Caso de Uso
-        return this.createPostUseCase.execute(createPostDto)
+        const created = await this.createPostUseCase.execute(createPostDto)
+        return { ok: true, payload: created }
     }
 
-    // Nota: Si hay otros métodos aquí (como un GET para ver el feed),
-    // déjalos tal como estaban por ahora, solo estamos refactorizando el POST.
+    @Get()
+    async findAll() {
+        const posts = await this.postsService.findAll()
+        return { total: posts.length, items: posts }
+    }
+
+    @Get("feed")
+    async getFeed(@Query() query: FeedQueryDto) {
+        const mode = query.mode ?? "latest"
+        const feedPosts = await this.postsService.getFeedPosts(query.categoryId)
+        const ranked = this.feedRankingFactory.forMode(mode).rank(feedPosts)
+        return { mode, count: ranked.length, rows: ranked }
+    }
 }

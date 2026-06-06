@@ -4,6 +4,7 @@ import { CreatePostUseCase } from './application/use-cases/create-post.use-case'
 import { PrismaPostRepository } from './infrastructure/repositories/prisma-post.repository';
 import { PrismaModule } from '../shared/prisma.module';
 import { PostsService } from './posts.service';
+import { FeedRankingStrategyFactory } from './feed-ranking.strategy';
 
 import { ModerationModule } from '../moderation/moderation.module';
 import { ModerationAdapter } from './infrastructure/adapters/moderation.adapter';
@@ -25,6 +26,7 @@ import { ModerationAdapter } from './infrastructure/adapters/moderation.adapter'
       useClass: ModerationAdapter,
     },
     PostsService,
+    FeedRankingStrategyFactory,
   ],
   exports: [PostsService],
 })

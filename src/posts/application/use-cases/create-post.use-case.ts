@@ -20,7 +20,7 @@ export class CreatePostUseCase {
 
         if (!isClean) {
             throw new BadRequestException(
-                "El contenido de la publicación fue bloqueado por spam.",
+                "Publicación prohibida por moderación.",
             )
         }
 

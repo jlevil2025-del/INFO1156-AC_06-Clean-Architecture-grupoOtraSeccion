@@ -15,6 +15,7 @@ export class PrismaPostRepository implements IPostRepository {
                 title: postData.title,
                 description: postData.description,
                 imageUrl: postData.imageUrl,
+                ...(postData.categoryId && { categoryId: postData.categoryId }),
             },
         })
     }
