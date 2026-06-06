@@ -1,11 +1,16 @@
 import { Module } from "@nestjs/common"
-import { LikesController } from "@/likes/likes.controller"
-import { LikesService } from "@/likes/likes.service"
-import { PostsModule } from "@/posts/posts.module"
+import { LikesController } from "./likes.controller"
+import { AddLikeUseCase } from "./application/use-cases/add-like.use-case"
+import { PrismaLikeRepository } from "./infrastructure/prisma-like.repository"
 
 @Module({
-    imports: [PostsModule],
     controllers: [LikesController],
-    providers: [LikesService],
+    providers: [
+        {
+            provide: "ILikeRepository",
+            useClass: PrismaLikeRepository,
+        },
+        AddLikeUseCase,
+    ],
 })
 export class LikesModule {}
