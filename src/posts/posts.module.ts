@@ -26,5 +26,6 @@ import { ModerationAdapter } from './infrastructure/adapters/moderation.adapter'
     },
     PostsService,
   ],
+  exports: [PostsService],
 })
 export class PostsModule {}
