@@ -6,7 +6,7 @@ import { PrismaModule } from '../shared/prisma.module';
 import { PostsService } from './posts.service';
 
 import { ModerationModule } from '../moderation/moderation.module';
-import { ModerationService } from '../moderation/moderation.service';
+import { ModerationAdapter } from './infrastructure/adapters/moderation.adapter';
 
 @Module({
   imports: [
@@ -22,7 +22,7 @@ import { ModerationService } from '../moderation/moderation.service';
     },
     {
       provide: 'IContentModerator',
-      useExisting: ModerationService,
+      useClass: ModerationAdapter,
     },
     PostsService,
   ],
