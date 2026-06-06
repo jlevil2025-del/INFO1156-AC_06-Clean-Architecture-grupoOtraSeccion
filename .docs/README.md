@@ -79,3 +79,104 @@ classDiagram
     GetFeedUseCase --> IPostRepository : Depende de la abstracción
     PrismaPostRepository ..|> IPostRepository : Implementa (DIP)
 ```
+
+---
+
+### B. Subsistema de Creación de Posts y Moderación (Bárbara Arriagada)
+
+Se refactorizó el flujo de creación de posts aplicando Arquitectura Limpia: el controlador ya no depende de `PostsService` directamente, sino que delega en un caso de uso que depende de interfaces de dominio, mientras que los adaptadores de infraestructura implementan esos contratos.
+
+**Solución Estructural:**
+
+1. **Contrato de Entrada (`CreatePostDto`):** Permanece en la capa de presentación con validaciones de `class-validator`. El controlador lo recibe y lo pasa al caso de uso.
+2. **Puertos de Salida (`IPostRepository` e `IContentModerator`):** Interfaces definidas en la capa de dominio (`domain/interfaces/`). El caso de uso las inyecta mediante los tokens `'IPostRepository'` e `'IContentModerator'`.
+3. **Datos de Dominio Puros (`IPostData`):** Estructura inerte con `title`, `description`, `imageUrl` y `categoryId`, sin dependencias de NestJS ni decoradores.
+4. **Núcleo de Aplicación (`CreatePostUseCase`):** Orquesta la moderación del contenido (título + descripción concatenados) y el guardado del post. Ignora por completo Prisma, HTTP o NestJS.
+5. **Adaptador de Moderación (`ModerationAdapter`):** Envuelve `ModerationService` (Alan) y traduce `ModerationResult.approved` (booleano de objeto) a `boolean` simple, cumpliendo el contrato `IContentModerator`.
+6. **Resolución IoC (`posts.module.ts`):** Se configuraron los tokens con `useClass` para enlazar `IContentModerator` → `ModerationAdapter` e `IPostRepository` → `PrismaPostRepository`.
+
+### Diagrama de Clases: Creación de Posts con Moderación
+
+```mermaid
+classDiagram
+    namespace CapaPresentacion {
+        class PostsController {
+            -createPostUseCase: CreatePostUseCase
+            +create(dto: CreatePostDto)
+        }
+        class CreatePostDto {
+            <<type>>
+            +title: string
+            +description: string
+            +imageUrl: string
+            +categoryId?: string
+        }
+    }
+
+    namespace CapaAplicacion {
+        class CreatePostUseCase {
+            -contentModerator: IContentModerator
+            -postRepository: IPostRepository
+            +execute(dto: CreatePostDto)
+        }
+    }
+
+    namespace CapaDominio {
+        class IContentModerator {
+            <<interface>>
+            +moderate(text: string): boolean | Promise~boolean~
+        }
+        class IPostRepository {
+            <<interface>>
+            +save(postData: IPostData): Promise~any~
+        }
+        class IPostData {
+            <<type>>
+            +title: string
+            +description: string
+            +imageUrl: string
+            +categoryId?: string
+        }
+    }
+
+    namespace CapaInfraestructura {
+        class ModerationAdapter {
+            -moderationService: ModerationService
+            +moderate(text: string): boolean
+        }
+        class PrismaPostRepository {
+            -prisma: PrismaService
+            +save(postData: IPostData): Promise~any~
+        }
+    }
+
+    PostsController --> CreatePostUseCase : Invoca
+    PostsController ..> CreatePostDto : Recibe DTO
+    CreatePostUseCase --> IContentModerator : Depende de abstracción
+    CreatePostUseCase --> IPostRepository : Depende de abstracción
+    CreatePostUseCase ..> IPostData : Crea dato puro
+    ModerationAdapter ..|> IContentModerator : Implementa (DIP)
+    PrismaPostRepository ..|> IPostRepository : Implementa (DIP)
+    ModerationAdapter --> ModerationService : Envuelve (Alan)
+```
+
+### Flujo de Dependencias (Post Creation)
+
+```
+HTTP Request
+    │
+    ▼
+PostsController (Presentación)        ← Recibe CreatePostDto
+    │
+    ▼
+CreatePostUseCase (Aplicación)        ← Orquesta: modera + guarda
+    │                    │
+    ▼                    ▼
+IContentModerator     IPostRepository  ← Puertos de dominio (DIP)
+    │                    │
+    ▼                    ▼
+ModerationAdapter   PrismaPostRepository  ← Adaptadores (Infraestructura)
+    │
+    ▼
+ModerationService (Alan)              ← Código legacy existente
+```
