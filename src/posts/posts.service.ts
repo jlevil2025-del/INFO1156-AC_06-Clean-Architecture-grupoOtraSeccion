@@ -10,6 +10,10 @@ export class PostsService {
         private readonly moderationService: ModerationService,
     ) {}
 
+    /**
+     * @deprecated Reemplazado por CreatePostUseCase (Clean Architecture).
+     * Se mantiene temporalmente por retrocompatibilidad.
+     */
     async create(data: CreatePostDto) {
         const text = `${data.title} ${data.description}`
         const moderation = await this.moderationService.moderate(text)

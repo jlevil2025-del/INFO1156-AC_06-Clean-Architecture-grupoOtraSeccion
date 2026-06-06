@@ -1,24 +1,28 @@
-import { Module } from "@nestjs/common"
-import { PostsController } from "./posts.controller"
-import { PostsService } from "./posts.service" // Mantenido temporalmente por compatibilidad
-import { GetFeedUseCase } from "./application/get-feed.use-case"
-import { PrismaPostRepository } from "./infrastructure/prisma-post.repository"
-import { FeedRankingStrategyFactory } from "./feed-ranking.strategy"
-import { ModerationModule } from "@/moderation/moderation.module"
-import { PrismaModule } from "../shared/prisma.module"
+import { Module } from '@nestjs/common';
+import { PostsController } from './infrastructure/controllers/posts.controller';
+import { CreatePostUseCase } from './application/use-cases/create-post.use-case';
+import { PrismaPostRepository } from './infrastructure/repositories/prisma-post.repository';
+import { MockContentModeratorAdapter } from './infrastructure/adapters/mock-content-moderator.adapter';
+import { PrismaModule } from '../shared/prisma.module'
+import { PostsService } from './posts.service'; 
 
 @Module({
-    imports: [PrismaModule, ModerationModule],
-    controllers: [PostsController],
-    providers: [
-        PostsService, // Requerido aún para los endpoints de creación y lista
-        GetFeedUseCase,
-        FeedRankingStrategyFactory,
-        {
-            provide: "IPostRepository",
-            useClass: PrismaPostRepository,
-        },
-    ],
-    exports: [PostsService], // Exportamos el servicio para que Bárbara pueda seguir usándolo
+  imports: [PrismaModule],
+  controllers: [PostsController],
+  providers: [
+    CreatePostUseCase,
+    {
+      provide: 'IPostRepository',
+      useClass: PrismaPostRepository,
+    },
+    {
+      provide: 'IContentModerator',
+      useClass: MockContentModeratorAdapter,
+    },
+    // 2. Agrega el servicio antiguo a los proveedores
+    PostsService, 
+  ],
+
+  exports: [PostsService], 
 })
 export class PostsModule {}
