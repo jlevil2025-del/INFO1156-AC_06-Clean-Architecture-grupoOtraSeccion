@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common"
-import { IPostRepository } from "../domain/post.repository.interface"
+import { IPostRepository } from "../domain/interfaces/i-post.repository"
 import { GetFeedInput } from "./get-feed.input"
 import { FeedRankingStrategyFactory } from "../feed-ranking.strategy"
 

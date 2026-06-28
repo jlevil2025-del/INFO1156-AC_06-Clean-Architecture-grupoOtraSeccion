@@ -1,4 +1,4 @@
 export interface GetFeedInput {
-    mode: string
+    mode?: string
     categoryId?: string
 }

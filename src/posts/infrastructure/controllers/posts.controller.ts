@@ -1,15 +1,15 @@
 import { Controller, Get, Post, Body, Query } from "@nestjs/common"
 import { CreatePostUseCase } from "../../application/use-cases/create-post.use-case"
+import { GetFeedUseCase } from "../../application/get-feed.use-case"
 import { PostsService } from "../../posts.service"
-import { FeedRankingStrategyFactory } from "../../feed-ranking.strategy"
 import { CreatePostDto, FeedQueryDto } from "../../posts.dtos"
 
 @Controller("api/posts")
 export class PostsController {
     constructor(
         private readonly createPostUseCase: CreatePostUseCase,
+        private readonly getFeedUseCase: GetFeedUseCase,
         private readonly postsService: PostsService,
-        private readonly feedRankingFactory: FeedRankingStrategyFactory,
     ) {}
 
     @Post()
@@ -26,9 +26,6 @@ export class PostsController {
 
     @Get("feed")
     async getFeed(@Query() query: FeedQueryDto) {
-        const mode = query.mode ?? "latest"
-        const feedPosts = await this.postsService.getFeedPosts(query.categoryId)
-        const ranked = this.feedRankingFactory.forMode(mode).rank(feedPosts)
-        return { mode, count: ranked.length, rows: ranked }
+        return this.getFeedUseCase.execute(query)
     }
 }

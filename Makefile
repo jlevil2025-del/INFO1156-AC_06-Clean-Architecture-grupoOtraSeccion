@@ -45,6 +45,9 @@ test:
 test-watch:
 	pnpm run test:watch
 
+test-cov:
+	pnpm run test:cov
+
 clean:
 	rm -rf dist coverage node_modules
 

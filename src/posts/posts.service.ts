@@ -37,24 +37,4 @@ export class PostsService {
         return this.prisma.post.findUnique({ where: { id } })
     }
 
-    async getFeedPosts(categoryId?: string) {
-        const posts = await this.prisma.post.findMany({
-            where: categoryId ? { categoryId } : undefined,
-            include: { comments: true, likes: true, category: true },
-        })
-
-        return posts.map((post) => ({
-            id: post.id,
-            title: post.title,
-            description: post.description,
-            imageUrl: post.imageUrl,
-            categoryId: post.categoryId,
-            category: post.category?.name ?? null,
-            createdAt: post.createdAt,
-            updatedAt: post.updatedAt,
-            likesCount: post.likes.reduce((sum, l) => sum + l.weight, 0),
-            commentsCount: post.comments.length,
-            relevanceScore: 0,
-        }))
-    }
 }
